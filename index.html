@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Cover Letter Generator Studio</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar no-print">
+      <div class="brand">
+        <div class="brand-badge">AI</div>
+        <div>
+          <h1>AI Cover Letter Generator</h1>
+          <p class="subtitle">Hybrid NLP + LLM 3-Stage Pipeline · ATS-Grounded Studio</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button id="load-sample-btn" class="btn btn-secondary" type="button">Load Sample Inputs</button>
+        <span id="provider-status-pill" class="status-pill">Checking providers…</span>
+      </div>
+    </header>
+
+    <main class="studio-grid">
+      <!-- Left Column: Inputs & Controls -->
+      <section class="panel inputs-panel no-print">
+        <div class="panel-header">
+          <h2>1. Candidate &amp; Role Inputs</h2>
+          <span class="hint">Paste text or upload .txt / .md files</span>
+        </div>
+
+        <div class="meta-row">
+          <div class="field">
+            <label for="role-title">Target Role (optional)</label>
+            <input id="role-title" type="text" placeholder="e.g., Generative AI Engineer" />
+          </div>
+          <div class="field">
+            <label for="company-name">Target Company (optional)</label>
+            <input id="company-name" type="text" placeholder="e.g., Acme AI Labs" />
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label for="resume-text">Candidate Resume</label>
+            <label class="file-upload-btn" for="resume-file">
+              Upload .txt / .md
+              <input id="resume-file" type="file" accept=".txt,.md,text/plain,text/markdown" hidden />
+            </label>
+          </div>
+          <textarea id="resume-text" rows="8" placeholder="Paste your resume here or upload a .txt / .md file..."></textarea>
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label for="jd-text">Target Job Description</label>
+            <label class="file-upload-btn" for="jd-file">
+              Upload .txt / .md
+              <input id="jd-file" type="file" accept=".txt,.md,text/plain,text/markdown" hidden />
+            </label>
+          </div>
+          <textarea id="jd-text" rows="8" placeholder="Paste the job description here or upload a .txt / .md file..."></textarea>
+        </div>
+
+        <div class="controls-card">
+          <h3>Generation Controls</h3>
+          <div class="controls-grid">
+            <div class="field">
+              <label for="provider">LLM Provider</label>
+              <select id="provider">
+                <option value="demo">Offline Smart Demo (No API Key)</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="openai">OpenAI</option>
+                <option value="groq">Groq</option>
+                <option value="ollama">Local Ollama</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="tone">Tone</label>
+              <select id="tone">
+                <option value="professional">Professional</option>
+                <option value="enthusiastic">Enthusiastic</option>
+                <option value="technical">Technical</option>
+                <option value="concise">Concise</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="length">Length</label>
+              <select id="length">
+                <option value="short">Short (~150–200w)</option>
+                <option value="medium" selected>Medium (~250–320w)</option>
+                <option value="detailed">Detailed (~350–450w)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="temperature">Temperature: <strong id="temp-value">0.4</strong></label>
+              <input id="temperature" type="range" min="0" max="1.2" step="0.1" value="0.4" />
+            </div>
+          </div>
+
+          <details class="advanced-options">
+            <summary>Optional Provider Overrides (Model / Session API Key)</summary>
+            <div class="meta-row">
+              <div class="field">
+                <label for="model-override">Model Override</label>
+                <input id="model-override" type="text" placeholder="e.g., gemini-2.5-flash, gpt-4o-mini, llama-3.3-70b-versatile" />
+              </div>
+              <div class="field">
+                <label for="api-key-override">API Key (session only)</label>
+                <input id="api-key-override" type="password" placeholder="Optional if env var is set" autocomplete="off" />
+              </div>
+            </div>
+          </details>
+
+          <div class="action-bar">
+            <button id="analyze-btn" class="btn btn-secondary" type="button">Analyze ATS Alignment</button>
+            <button id="generate-btn" class="btn btn-primary" type="button">Generate Cover Letter</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: ATS Analysis, Output Studio, Refinement & Prompt Inspector -->
+      <section class="panel output-panel">
+        <div class="ats-card no-print">
+          <div class="ats-header">
+            <div>
+              <h2>2. ATS Keyword &amp; Alignment</h2>
+              <p class="hint">Extracted technical skills and multi-word phrases compared against your resume</p>
+            </div>
+            <div class="score-badge">
+              <span id="ats-score">--%</span>
+              <small>Match</small>
+            </div>
+          </div>
+
+          <div class="progress-track">
+            <div id="ats-progress-fill" class="progress-fill" style="width: 0%;"></div>
+          </div>
+
+          <div class="pills-section">
+            <div class="pills-group">
+              <h3>Matched Keywords (<span id="matched-count">0</span>)</h3>
+              <div id="matched-pills" class="pill-list">
+                <span class="empty-note">Run analysis or generate to view matched ATS keywords.</span>
+              </div>
+            </div>
+            <div class="pills-group">
+              <h3>Missing Keywords (<span id="missing-count">0</span>)</h3>
+              <div id="missing-pills" class="pill-list">
+                <span class="empty-note">Missing keywords are flagged so the model never fabricates them.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="draft-card">
+          <div class="draft-header no-print">
+            <div>
+              <h2>3. Tailored Cover Letter</h2>
+              <span id="generation-meta" class="hint">Ready to generate</span>
+            </div>
+            <div class="export-actions">
+              <button id="copy-btn" class="btn btn-ghost" type="button" disabled>Copy</button>
+              <button id="export-txt-btn" class="btn btn-ghost" type="button" disabled>Export .txt</button>
+              <button id="export-md-btn" class="btn btn-ghost" type="button" disabled>Export .md</button>
+              <button id="print-btn" class="btn btn-secondary" type="button" disabled>Print / PDF</button>
+            </div>
+          </div>
+
+          <div id="notice-banner" class="notice-banner hidden no-print"></div>
+
+          <!-- Editable textarea for screen; clean print mirror for PDF -->
+          <textarea
+            id="cover-letter-output"
+            class="letter-editor no-print"
+            rows="15"
+            placeholder="Your tailored, resume-grounded cover letter will appear here..."
+          ></textarea>
+          <div id="word-count-bar" class="word-count-bar no-print">0 words · 0 characters</div>
+          <article id="print-sheet" class="print-only"></article>
+
+          <div class="refine-box no-print">
+            <h3>Human-in-the-Loop Refinement</h3>
+            <div class="quick-chips">
+              <button class="chip" type="button" data-feedback="Make it shorter and more concise.">Make shorter</button>
+              <button class="chip" type="button" data-feedback="Use a more technical engineering tone highlighting measurable metrics.">More technical</button>
+              <button class="chip" type="button" data-feedback="Make the opening more enthusiastic and mission-driven.">More enthusiastic</button>
+              <button class="chip" type="button" data-feedback="Highlight key achievements using concise bullet points.">Add bullet highlights</button>
+            </div>
+            <div class="refine-row">
+              <input
+                id="refine-feedback"
+                type="text"
+                placeholder="Ask for a revision (e.g., 'Emphasize prompt engineering and trim paragraph 3')..."
+              />
+              <button id="refine-btn" class="btn btn-primary" type="button" disabled>Refine Draft</button>
+            </div>
+          </div>
+        </div>
+
+        <details class="prompt-inspector no-print">
+          <summary>Prompt Inspector — View Exact System &amp; Context-Enriched User Prompt</summary>
+          <div class="inspector-body">
+            <div>
+              <h4>SYSTEM_PROMPT (Role &amp; Anti-Hallucination Rules)</h4>
+              <pre id="inspector-system">Generate or refine a draft to inspect the system prompt.</pre>
+            </div>
+            <div>
+              <h4>Engineered User Prompt (ATS Context + Constraints)</h4>
+              <pre id="inspector-user">Generate or refine a draft to inspect the context-enriched prompt.</pre>
+            </div>
+          </div>
+        </details>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
